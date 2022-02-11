@@ -2,21 +2,17 @@ import pygame, sys, os
 from text_input import *
 import math
 from Parcer import Parcer
+from formulas import folmulas
 
 
 
-formula = ['((-x)**2/3 - ((x)**4/3 - (4*x)**2 + 4)**(1/2)/2)',
-           'sin([x])', 
-           'cos(x)*cos(x) + sin(x)*sin(x)',
-           '20/x',
-           '(ctn(x**2))**0.5',
-           'tan(x) + tan([x])',
-           'ctn(x)/ctn([x])',
-           'tan([x])',
-           '(1+x)**0.5',
-           '1/tan(x)*ctn(x)'][-1]
-allowed_values = ['x', '+', '-', '*', '/', '.', '(', ')', '[', ']'] + [str(i) for i in range(10)]
-sin = ['sin', 'cos', 'tan', 'ctn']
+formula = ''
+allowed_values = ['x', '+', '-', '*', '/', '.', '(', ')', '[', ']', '%', '^', '&',] + [str(i) for i in range(10)]
+sin = ['sin', 'cos', 'tan', 'ctn', 'log']
+
+CORS = None
+ARRANGE = 12
+LIMIT = 70
 
 black = (0, 0, 0)
 white = (255, 255, 255)
@@ -24,9 +20,6 @@ grey = (211,211,211)
 red = (255, 0, 0)
 hex_color = (30, 30, 30)
 
-
-arrange = 12
-limit = 25
 
 y_AXIS = [(299, 0), (299, 600), 2]
 x_AXIS = [(0, 299), (600, 299), 2]
@@ -40,11 +33,10 @@ pygame.display.set_caption("Graf")
 screen.fill(white)
 
 txt_form = Input(screen, 650, 100, 'Formula:')
-txt_zoom = Input(screen, 650, 200, 'Zoom:')
-txt_points = Input(screen, 650, 300, 'Points:')
-txts = [txt_form, txt_zoom, txt_points]
 
-btn = Button(screen, 650, 500)
+draw_btn = Button(screen, (650, 134), (70, 40), 'aquamarine3', ('Draw', (8, 10)))
+minus = Button(screen, (650, 250), (60, 40), 'darkorchid3', ('-', (24, 8)), 'Zoom:')
+plus = Button(screen, (720, 250), (60, 40), 'firebrick2', ('+', (24, 8)))
 
 font = pg.font.Font(None, 32)
 
@@ -72,15 +64,17 @@ def correctFormula(formula):
 def getX(i: int):
     if i == None:
         return None
-    return i*arrange + 300
+    return i*ARRANGE + 300
 
 def getY(i: int):
     if i == None:
         return None
-    return -i*arrange + 300
+    return -i*ARRANGE + 300
+
+
 
 def drawSqueres():
-    for i in range(0, 600, arrange):
+    for i in range(0, 600, ARRANGE):
         pygame.draw.line(screen, grey, (i, 0), (i, 600))
         pygame.draw.line(screen, grey, (0, i), (600, i))
         
@@ -90,20 +84,23 @@ def drawSqueres():
         
         
 def getPoints(formula: str):
+    if not formula:
+        return
     
     count = formula.count('x')
     formula = formula.replace('x', '{}')
     points = []
     
-    for x in range(-limit, limit):
+    for x in range(-LIMIT, LIMIT):
         try:
+            form = formula.replace('x', '{}')
             if x < 0:
-                formula = formula.replace('x', '${}$')
-            #print(formula.format(*([str(x)]*count)), ',', formula.format(*([str(x + 1)]*count)))
+                form = formula.replace('{}', '${}$')
+            
             x_1 = x
             x_2 = x + 1
-            y_1= Parcer._eval(formula.format(*([(x_1)]*count)), x_1)
-            y_2 = Parcer._eval(formula.format(*([(x_2)]*count)), x_2)
+            y_1= Parcer._eval(form.format(*([(x_1)]*count)), x_1)
+            y_2 = Parcer._eval(form.format(*([(x_2)]*count)), x_2)
             
             points.append(((getX(x_1), getY(y_1)), (getX(x_2), getY(y_2))))
         except ZeroDivisionError:
@@ -111,27 +108,46 @@ def getPoints(formula: str):
         
     return points
 
-cors = getPoints(formula)
+
 def drawGraf():
-    for cor in cors:
-        try:
-          pygame.draw.line(screen, red, *cor, 4)
-        except TypeError:
-            continue
+    global CORS
+    if CORS:
+        for cor in CORS:
+            try:
+                pygame.draw.line(screen, red, *cor, 4)
+            except TypeError:
+                continue
 
 def printText(txt: Input, event_key):
-    if txt.active == True:
-        if event_key == pg.K_BACKSPACE:
-            txt.text = txt.text[:-1]
-        else:
-            txt.text += event.unicode
+    if event_key == pygame.K_LEFT:
+        if txt._cursor > 0:
+            txt._cursor -= 1
+    elif event_key == pygame.K_RIGHT:
+        if txt._cursor < len(txt.text):
+            txt._cursor += 1
             
-def activate(*args):
-    txt_form.active = args[0]
-    txt_zoom.active = args[1]
-    txt_points.active = args[2]
-    
+    elif event_key == pg.K_BACKSPACE and txt.active == True:
+        txt.delete()
+    else:
+        txt.append(event.unicode)
         
+def resize(arg):
+    global ARRANGE
+    global CORS
+    global LIMIT
+    
+    if arg == 'plus':
+        if ARRANGE < 30:
+            ARRANGE += 2
+            if LIMIT - int(ARRANGE/2) > 0:
+                LIMIT -= int(ARRANGE/2)
+    if arg == 'minus':
+        if ARRANGE > 4:
+            ARRANGE -= 2
+            LIMIT += int(ARRANGE/2)
+        
+    CORS = getPoints(formula)
+    
 txt_form.active = True
 while True:
     
@@ -143,9 +159,9 @@ while True:
     drawGraf()
     pygame.draw.rect(screen, hex_color, [600, 0, 300, 600])
     txt_form.draw()
-    txt_points.draw()
-    txt_zoom.draw()
-    btn.draw()
+    draw_btn.draw()
+    minus.draw()
+    plus.draw()
     
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -154,57 +170,40 @@ while True:
             
         if event.type == pygame.MOUSEBUTTONDOWN:
             if txt_form._input_box.collidepoint(event.pos):
-                activate(True, False, False)
+                txt_form.active = True
                 
-            elif txt_zoom._input_box.collidepoint(event.pos):
-                activate(False, True, False)
+            elif minus._input_box.collidepoint(event.pos):
+                resize('minus')
+                    
+            elif plus._input_box.collidepoint(event.pos):
+                resize('plus')
                 
-            elif txt_points._input_box.collidepoint(event.pos):
-                activate(False, False, True)
-               
-                
-            elif btn._input_box.collidepoint(event.pos):
+            elif draw_btn._input_box.collidepoint(event.pos):
                 if txt_form.text != '':
                     if not correctFormula(txt_form.text):
-                        txt_form.warrning()
+                        txt_form.error = True
                         continue
                 else:
                     txt_form.text = formula
                 
                 formula = txt_form.text
+                txt_form.error = False
                 
-                if txt_zoom.text:
-                    try:
-                        arrange = int(txt_zoom.text)
-                    except ValueError:
-                        txt_zoom.warrning()
-                else:
-                    arrange = 12
-                        
-                if txt_points.text:
-                    try:
-                        limit = int(txt_points.text)
-                    except ValueError:
-                        txt_points.warrning()
-                else:
-                    limit = 25
-                
-                cors = getPoints(formula)
-                activate(False, False, False)
+                CORS = getPoints(formula)
+                txt_form.active = False
                 
             else:
-                activate(False, False, False)
-                
+                txt_form.active = False
+
             txt_form.color = txt_form.colors[txt_form.active]
             
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_UP:
-                if arrange < 30:
-                    arrange += 3
+                resize('plus')
+                    
                 cors = getPoints(formula)
             elif event.key == pygame.K_DOWN:
-                if arrange > 4:
-                    arrange -= 3
-                cors = getPoints(formula)
-            for t in txts:
-                printText(t, event.key)
+                resize('minus')
+                
+            if txt_form.active:
+                printText(txt_form, event.key)

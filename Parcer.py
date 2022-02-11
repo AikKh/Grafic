@@ -2,8 +2,8 @@ import math
 
 class Parcer:
     
-    sin = ['sin', 'cos', 'tan', 'ctn']
-    sin_shorts = ['s', 'c', 't', 'g']
+    sin = ['sin', 'cos', 'tan', 'ctn', 'log']
+    sin_shorts = ['s', 'c', 't', 'g', 'l']
     
     def _eval(expression: str, x):
         if expression.count('(') == 0 and expression.count('[') == 0 and expression.count('$') == 0:
@@ -26,12 +26,17 @@ class Parcer:
     def getSin(i, s = None):
         if s == 's':
             return math.sin(i)
-        if s == 'c':
+        elif s == 'c':
             return math.cos(i)
-        if s == 't':
+        elif s == 't':
             return math.tan(i)
-        if s == 'g':
+        elif s == 'g':
             return 1/math.tan(i)
+        elif s == 'l':
+            try:
+                return math.log10(i)
+            except ValueError:
+                return None
         else:
             return i
         
@@ -39,12 +44,14 @@ class Parcer:
     def calculate(expression: str, x: str):
         
         if expression.count('(') == 0 and expression.count('[') == 0 and expression.count('$') == 0:
-            return eval(expression)
+            try:
+                return eval(expression)
+            except TypeError:
+                return
         
         res = ''
         state = ''
-        able = False
-        
+        able = True
         for l in expression:
             #check sin
             if l in Parcer.sin_shorts:
@@ -72,7 +79,7 @@ class Parcer:
             res = Parcer.getAbs(res)
             if state != '':
                 original_res = '({})'.format(original_res)
-            
+        
         new = Parcer.getX(res, x)
         new = Parcer.getSin(eval(new), state)
         expression = expression.replace(state + original_res, str(new))
