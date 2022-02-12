@@ -1,3 +1,4 @@
+import random
 import pygame, sys, os
 from text_input import *
 import math
@@ -12,7 +13,7 @@ sin = ['sin', 'cos', 'tan', 'ctn', 'log']
 
 CORS = None
 ARRANGE = 12
-LIMIT = 70
+LIMIT = 80
 
 black = (0, 0, 0)
 white = (255, 255, 255)
@@ -32,7 +33,7 @@ pygame.display.set_caption("Graf")
 
 screen.fill(white)
 
-txt_form = Input(screen, 650, 100, 'Formula:')
+txt_form = Input(screen, 650, 100, 'Expression:')
 
 draw_btn = Button(screen, (650, 134), (70, 40), 'aquamarine3', ('Draw', (8, 10)))
 minus = Button(screen, (650, 250), (60, 40), 'darkorchid3', ('-', (24, 8)), 'Zoom:')
@@ -105,6 +106,9 @@ def getPoints(formula: str):
             points.append(((getX(x_1), getY(y_1)), (getX(x_2), getY(y_2))))
         except ZeroDivisionError:
             continue
+        except TypeError:
+            txt_form.error = True
+            return
         
     return points
 
@@ -114,7 +118,7 @@ def drawGraf():
     if CORS:
         for cor in CORS:
             try:
-                pygame.draw.line(screen, red, *cor, 4)
+                pygame.draw.line(screen, (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)), *cor, 4)
             except TypeError:
                 continue
 
@@ -129,7 +133,8 @@ def printText(txt: Input, event_key):
     elif event_key == pg.K_BACKSPACE and txt.active == True:
         txt.delete()
     else:
-        txt.append(event.unicode)
+        if event_key != pygame.K_LSHIFT:
+            txt.append(event.unicode)
         
 def resize(arg):
     global ARRANGE
